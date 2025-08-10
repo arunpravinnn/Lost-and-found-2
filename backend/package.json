@@ -12,11 +12,14 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "i": "^0.3.7",
+    "jsonwebtoken": "^9.0.2",
     "npm": "^11.5.2",
+    "postgres": "^3.4.7",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
