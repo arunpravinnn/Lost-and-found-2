@@ -137,6 +137,67 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                       });
                     },
                   ),
+                  RadioListTile<String>(
+                    title: const Text('AB1'),
+                    value: 'AB1',
+                    groupValue: selectedLocation,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedLocation = value!;
+                      });
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('AB2'),
+                    value: 'AB2',
+                    groupValue: selectedLocation,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedLocation = value!;
+                      });
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('AB3'),
+                    value: 'AB3',
+                    groupValue: selectedLocation,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedLocation = value!;
+                      });
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('AB4'),
+                    value: 'AB4',
+                    groupValue: selectedLocation,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedLocation = value!;
+                      });
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('IT CANTEEN'),
+                    value: 'IT CANTEEN',
+                    groupValue: selectedLocation,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedLocation = value!;
+                      });
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('MBA CANTEEN'),
+                    value: 'MBA CANTEEN',
+                    groupValue: selectedLocation,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedLocation = value!;
+                      });
+                    },
+                  ),
+                  
                 ],
               ),
               actions: [
