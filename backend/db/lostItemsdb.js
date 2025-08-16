@@ -23,7 +23,7 @@ document.getElementById().addEventListener('Submit',async(e)=>{
     if (!file){
         return alert("Please select a file")
     }
-    const fileName = `${itemid}`
+    const fileName = `${item_id}`
 
     const { data: storageData, error: storageError } = await supabase.storage.from('lost-images').upload(fileName, file)
 

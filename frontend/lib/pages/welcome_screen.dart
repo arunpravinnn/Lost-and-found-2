@@ -1,5 +1,5 @@
+import 'package:amrita_retriever/pages/login.dart';
 import 'package:flutter/material.dart';
-import 'lost_items_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -47,7 +47,7 @@ class WelcomeScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const LostItemsScreen()),
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
                   );
                 },
                 child: const Text(
