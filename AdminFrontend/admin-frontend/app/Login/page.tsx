@@ -29,7 +29,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-indigo-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-indigo-100 w-full h-full">
       <div className="bg-white shadow-lg rounded-2xl w-full max-w-md p-8">
         <div className="flex flex-col items-center">
           <div className="bg-gradient-to-r  from-[#da0952] to-[#e3447c]  p-4 rounded-full">

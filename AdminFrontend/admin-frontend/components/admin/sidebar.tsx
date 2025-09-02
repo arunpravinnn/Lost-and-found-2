@@ -3,13 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, PlusCircleIcon, Users, Settings } from "lucide-react"
+import { LayoutDashboard, PlusCircleIcon, Users, Settings, ShoppingBasket } from "lucide-react"
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/AddItems", label: "Add Items", icon: PlusCircleIcon },
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard/lostitems", label: "Lost Items", icon: ShoppingBasket  },
 ]
 
 export default function Sidebar() {

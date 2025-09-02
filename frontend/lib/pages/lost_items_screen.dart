@@ -19,6 +19,7 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
   // Filters
   String selectedSort = "Newest First";
   String selectedLocation = "All";
+  String searchQuery = "";
 
   @override
   void initState() {
@@ -37,7 +38,7 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
 
         setState(() {
           allItems = jsonData.cast<Map<String, dynamic>>();
-          displayedItems = List.from(allItems);
+          applyFilters(); // Initial sort/filter/search
 
           // Extract unique locations
           uniqueLocations = allItems
@@ -63,38 +64,54 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
     }
   }
 
-  // Sorting logic
+  /// Applies search, location filter, and sort in one go
+  void applyFilters() {
+    List<Map<String, dynamic>> filtered = allItems;
+
+    // Location filter
+    if (selectedLocation != "All") {
+      filtered = filtered
+          .where((item) => item["location_lost"] == selectedLocation)
+          .toList();
+    }
+
+    // Search filter (case insensitive)
+    if (searchQuery.isNotEmpty) {
+      filtered = filtered.where((item) {
+        final name = item["item_name"]?.toString().toLowerCase() ?? "";
+        return name.contains(searchQuery.toLowerCase());
+      }).toList();
+    }
+
+    // Sort
+    if (selectedSort == "Newest First") {
+      filtered.sort((a, b) =>
+          b["date_lost"].toString().compareTo(a["date_lost"].toString()));
+    } else if (selectedSort == "Oldest First") {
+      filtered.sort((a, b) =>
+          a["date_lost"].toString().compareTo(b["date_lost"].toString()));
+    }
+
+    setState(() {
+      displayedItems = filtered;
+    });
+  }
+
   void applySort(String sortOption) {
-    setState(() {
-      selectedSort = sortOption;
-      if (sortOption == "Newest First") {
-        displayedItems.sort((a, b) =>
-            b["date_lost"].toString().compareTo(a["date_lost"].toString()));
-      } else if (sortOption == "Oldest First") {
-        displayedItems.sort((a, b) =>
-            a["date_lost"].toString().compareTo(b["date_lost"].toString()));
-      }
-    });
+    selectedSort = sortOption;
+    applyFilters();
   }
 
-  // Location filter logic
   void applyLocationFilter(String? location) {
-    setState(() {
-      selectedLocation = location ?? "All";
-      if (selectedLocation == "All") {
-        displayedItems = List.from(allItems);
-      } else {
-        displayedItems = allItems
-            .where((item) => item["location_lost"] == selectedLocation)
-            .toList();
-      }
-
-      // Reapply sorting after filtering
-      applySort(selectedSort);
-    });
+    selectedLocation = location ?? "All";
+    applyFilters();
   }
 
-  // Reusable feature button
+  void applySearch(String value) {
+    searchQuery = value;
+    applyFilters();
+  }
+
   Widget buildFeatureButton({
     required String title,
     required List<String> options,
@@ -103,13 +120,11 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
   }) {
     return ExpansionTile(
       title: ElevatedButton(
-        onPressed: null, // Disable default click
+        onPressed: null,
         style: ElevatedButton.styleFrom(
-          foregroundColor: const Color(0xFFD5316B), // pinkish red
-          // foregroundColor: Colors.white,
+          foregroundColor: const Color(0xFFD5316B),
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Text(title, style: const TextStyle(fontSize: 16)),
       ),
@@ -132,7 +147,22 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Feature buttons
+                // 🔍 Search Field
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: "Search items...",
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onChanged: applySearch,
+                  ),
+                ),
+
+                // Sort & Filter
                 buildFeatureButton(
                   title: "Sort By",
                   options: ["Newest First", "Oldest First"],
@@ -147,31 +177,32 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                 ),
                 const Divider(),
 
-                // Items list
+                // 📝 Items List
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: displayedItems.length,
-                    itemBuilder: (context, index) {
-                      final item = displayedItems[index];
-                      return Card(
-                        margin: const EdgeInsets.all(10),
-                        child: ListTile(
-                          leading: Image.network(
-                            item["image"] ?? "",
-                            width: 60,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.image_not_supported),
-                          ),
-                          title:
-                              Text(item["item_name"] ?? "No Title"),
-                          subtitle: Text(
-                              "${item["location_lost"] ?? "Unknown"}\n${item["date_lost"] ?? ""}"),
-                          trailing: Text(item["item_id"] ?? ""),
+                  child: displayedItems.isEmpty
+                      ? const Center(child: Text("No items found."))
+                      : ListView.builder(
+                          itemCount: displayedItems.length,
+                          itemBuilder: (context, index) {
+                            final item = displayedItems[index];
+                            return Card(
+                              margin: const EdgeInsets.all(10),
+                              child: ListTile(
+                                leading: Image.network(
+                                  item["image_url"] ?? "",
+                                  width: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(Icons.image_not_supported),
+                                ),
+                                title: Text(item["item_name"] ?? "No Title"),
+                                subtitle: Text(
+                                    "${item["location_lost"] ?? "Unknown"}\n${item["date_lost"] ?? ""}"),
+                                trailing: Text(item["item_id"] ?? ""),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),
