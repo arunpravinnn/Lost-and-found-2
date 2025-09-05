@@ -55,6 +55,16 @@ dev_dependencies:
 flutter:
   assets:
     - assets/goldie.png
+    - assets/fonts/
+
+  fonts:
+    - family: Karma
+      fonts:
+        - asset: assets/fonts/Karma_Future.otf
+    - family: Honk
+      fonts:
+        - asset: assets/fonts/Honk.ttf
+
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

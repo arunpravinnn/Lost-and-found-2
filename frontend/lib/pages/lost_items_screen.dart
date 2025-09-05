@@ -38,17 +38,14 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
 
         setState(() {
           allItems = jsonData.cast<Map<String, dynamic>>();
-          applyFilters(); // Initial sort/filter/search
+          applyFilters();
 
-          // Extract unique locations
           uniqueLocations = allItems
               .map((item) => item["location_lost"]?.toString() ?? "")
               .where((loc) => loc.isNotEmpty)
               .toSet()
               .toList();
           uniqueLocations.sort();
-
-          // Add "All" at the top
           uniqueLocations = ["All", ...uniqueLocations];
 
           isLoading = false;
@@ -64,18 +61,15 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
     }
   }
 
-  /// Applies search, location filter, and sort in one go
   void applyFilters() {
     List<Map<String, dynamic>> filtered = allItems;
 
-    // Location filter
     if (selectedLocation != "All") {
       filtered = filtered
           .where((item) => item["location_lost"] == selectedLocation)
           .toList();
     }
 
-    // Search filter (case insensitive)
     if (searchQuery.isNotEmpty) {
       filtered = filtered.where((item) {
         final name = item["item_name"]?.toString().toLowerCase() ?? "";
@@ -83,7 +77,6 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
       }).toList();
     }
 
-    // Sort
     if (selectedSort == "Newest First") {
       filtered.sort((a, b) =>
           b["date_lost"].toString().compareTo(a["date_lost"].toString()));
@@ -118,51 +111,95 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
     required String selectedValue,
     required Function(String?) onChanged,
   }) {
-    return ExpansionTile(
-      title: ElevatedButton(
-        onPressed: null,
-        style: ElevatedButton.styleFrom(
-          foregroundColor: const Color(0xFFD5316B),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ExpansionTile(
+        iconColor: const Color(0xFFD5316B),
+        collapsedIconColor: const Color(0xFFD5316B),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFFD5316B),
+          ),
         ),
-        child: Text(title, style: const TextStyle(fontSize: 16)),
-      ),
-      children: options
-          .map((option) => RadioListTile<String>(
+        children: options
+            .map(
+              (option) => RadioListTile<String>(
+                activeColor: const Color(0xFFD5316B),
                 value: option,
                 groupValue: selectedValue,
                 onChanged: onChanged,
-                title: Text(option),
-              ))
-          .toList(),
+                title: Text(
+                  option,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+
+    
     return Scaffold(
-      appBar: AppBar(title: const Text("Available Items")),
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text(
+          "Amrita Retriever",
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: "Honk",
+            fontSize: 30,
+            fontVariations: [
+              FontVariation('ital', 0),
+              FontVariation('wght', 400),
+              FontVariation('MORF', 15),
+              FontVariation('SHLN', 50)
+            ],
+          ),
+        ),
+        backgroundColor: const Color(0xFFD5316B),
+        centerTitle: true,
+        elevation: 4,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
+      ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFD5316B)))
           : Column(
               children: [
-                // 🔍 Search Field
+                // Search Field
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: TextField(
                     decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
                       hintText: "Search items...",
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFFD5316B)),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Color(0xFFD5316B), width: 2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                     onChanged: applySearch,
                   ),
                 ),
 
-                // Sort & Filter
                 buildFeatureButton(
                   title: "Sort By",
                   options: ["Newest First", "Oldest First"],
@@ -175,29 +212,65 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                   selectedValue: selectedLocation,
                   onChanged: (value) => applyLocationFilter(value),
                 ),
-                const Divider(),
 
                 Expanded(
                   child: displayedItems.isEmpty
-                      ? const Center(child: Text("No items found."))
+                      ? const Center(
+                          child: Text(
+                            "No items found.",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black,
+                            ),
+                          ),
+                        )
                       : ListView.builder(
                           itemCount: displayedItems.length,
                           itemBuilder: (context, index) {
                             final item = displayedItems[index];
                             return Card(
-                              margin: const EdgeInsets.all(10),
+                              elevation: 3,
+                              margin: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                               child: ListTile(
-                                leading: Image.network(
-                                  item["image_url"] ?? "",
-                                  width: 60,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.image_not_supported),
+                                leading: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    item["image_url"] ?? "",
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Icon(Icons.image_not_supported,
+                                            color: Colors.grey, size: 40),
+                                  ),
                                 ),
-                                title: Text(item["item_name"] ?? "No Title"),
+                                title: Text(
+                                  item["item_name"] ?? "No Title",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2D2D2D),
+                                  ),
+                                ),
                                 subtitle: Text(
-                                    "${item["location_lost"] ?? "Unknown"}\n${item["date_lost"] ?? ""}"),
-                                trailing: Text(item["item_id"] ?? ""),
+                                  "${item["location_lost"] ?? "Unknown"}\n${item["date_lost"] ?? ""}",
+                                  style: TextStyle(
+                                    height: 1.4,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                trailing: Text(
+                                  item["item_id"] ?? "",
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black54,
+                                  ),
+                                ),
                               ),
                             );
                           },
