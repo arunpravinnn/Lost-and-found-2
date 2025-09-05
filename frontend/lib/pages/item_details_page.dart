@@ -32,11 +32,11 @@ class ItemDetailsPage extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Image.network(
                   item["image_url"] ?? "",
-                  height: 200,
-                  fit: BoxFit.cover,
+                  height: 300,
+                  fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) => const Icon(
                     Icons.image_not_supported,
-                    size: 80,
+                    size: 40,
                     color: Colors.grey,
                   ),
                 ),

@@ -94,7 +94,6 @@ adminRouter.post("/add_items", upload.single("image"), async (req, res) => {
       securityQuestion, // extra field if frontend sends it
       answer,           // extra field if frontend sends it
     } = req.body;
-
     let image_url = null;
 
     // ✅ handle image upload if file exists
@@ -133,9 +132,9 @@ adminRouter.post("/add_items", upload.single("image"), async (req, res) => {
           reported_by_name,
           reported_by_roll,
           created_post,
+          image_url,
           security_question: securityQuestion || null,
           answer: answer || null,
-          image_url,
         },
       ])
       .select();

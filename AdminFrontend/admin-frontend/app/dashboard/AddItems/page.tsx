@@ -1,12 +1,14 @@
 "use client";
 import { useState } from "react";
 import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 
 interface LostItem {
-  name: string;
+  item_id: string;
+  item_name: string;
   description: string;
   location_lost: string;
-  dateLost: Date | null | string;
+  date_lost: Date | null | string;
   reported_by_name: string;
   securityQuestion: string;
   reported_by_roll: string;
@@ -17,9 +19,10 @@ interface LostItem {
 
 export default function DashboardPage() {
   const [lostItem, setLostItem] = useState<LostItem>({
-    name: "",
+    item_id: uuidv4(),
+    item_name: "",
     description: "",
-    dateLost: new Date(),
+    date_lost: new Date(),
     location_lost: "",
     reported_by_name: "",
     securityQuestion: "",
@@ -46,9 +49,10 @@ export default function DashboardPage() {
     e.preventDefault();
 
     const formData = new FormData();
-    formData.append("name", lostItem.name);
+    formData.append("item_id", lostItem.item_id);
+    formData.append("item_name", lostItem.item_name);
     formData.append("description", lostItem.description);
-    formData.append("dateLost", String(lostItem.dateLost));
+    formData.append("date_lost", String(lostItem.date_lost));
     formData.append("location_lost", lostItem.location_lost);
     formData.append("reported_by_name", lostItem.reported_by_name);
     formData.append("reported_by_roll", lostItem.reported_by_roll);
@@ -63,20 +67,20 @@ export default function DashboardPage() {
       const { data } = await axios.post(
         "http://localhost:3000/api/admin/add_items",
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
       );
       console.log("Item added successfully:", data);
 
       setLostItem({
-        name: "",
+        item_id:"",
+        item_name: "",
         description: "",
-        dateLost: null,
+        date_lost: new Date(),
         location_lost: "",
         reported_by_name: "",
         reported_by_roll: "",
         securityQuestion: "",
         answer: "",
-        created_post: null,
+        created_post: new Date(),
         image: null,
       });
     } catch (error) {
@@ -98,8 +102,8 @@ export default function DashboardPage() {
             <label className="block text-sm font-medium">Item Name</label>
             <input
               type="text"
-              name="name"
-              value={lostItem.name}
+              name="item_name"
+              value={lostItem.item_name}
               onChange={handleChange}
               required
               className="mt-1 block w-full border border-gray-300 rounded-md p-2"
@@ -122,8 +126,8 @@ export default function DashboardPage() {
             <label className="block text-sm font-medium">Date Lost</label>
             <input
               type="date"
-              name="dateLost"
-              value={lostItem.dateLost as string}
+              name="date_lost"
+              value={lostItem.date_lost as string}
               onChange={handleChange}
               required
               className="mt-1 block w-full border border-gray-300 rounded-md p-2"
