@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import multer from "multer";
-import { v4 as uuidv4 } from "uuid";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -15,9 +14,7 @@ const upload = multer({ storage });
 
 const adminRouter = express.Router();
 
-/**
- * Admin Login
- */
+
 adminRouter.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -48,9 +45,7 @@ adminRouter.post("/login", async (req, res) => {
   }
 });
 
-/**
- * Admin Signup
- */
+
 adminRouter.post("/signup", async (req, res) => {
   const { email, password } = req.body;
 
@@ -77,13 +72,9 @@ adminRouter.post("/signup", async (req, res) => {
   }
 });
 
-/**
- * Add Lost Item
- */
 adminRouter.post("/add_items", upload.single("image"), async (req, res) => {
   try {
     const {
-      item_id,
       item_name,
       description,
       location_lost,
@@ -91,16 +82,56 @@ adminRouter.post("/add_items", upload.single("image"), async (req, res) => {
       reported_by_name,
       reported_by_roll,
       created_post,
-      securityQuestion, // extra field if frontend sends it
-      answer,           // extra field if frontend sends it
+      securityQuestion,
+      answer,
     } = req.body;
+
+    function generatePrefix(location) {
+      if (!location) return "XX";
+
+      const words = location.trim().split(/\s+/);
+      let prefix = "";
+
+      for (let i = 0; i < Math.min(2, words.length); i++) {
+        prefix += words[i][0].toUpperCase();
+      }
+
+      const lastWord = words[words.length - 1];
+      if (!isNaN(lastWord)) {
+        prefix += lastWord;
+      }
+
+      return prefix;
+    }
+
+    const prefix = generatePrefix(location_lost);
+
+    const { data: lastItem, error: fetchError } = await supabase
+      .from("Lost_items")
+      .select("item_id")
+      .ilike("item_id", `${prefix}%`)
+      .order("item_id", { ascending: false })
+      .limit(1);
+
+    if (fetchError) {
+      return res.status(400).json({ error: fetchError.message });
+    }
+
+    let newNumber = 1;
+    if (lastItem && lastItem.length > 0) {
+      const lastId = lastItem[0].item_id;
+      const lastNum = parseInt(lastId.slice(prefix.length));
+      newNumber = lastNum + 1;
+    }
+
+    const item_id = `${prefix}${String(newNumber).padStart(3, "0")}`;
+
     let image_url = null;
 
-    // ✅ handle image upload if file exists
     if (req.file) {
       const file = req.file;
       const fileExt = file.originalname.split(".").pop();
-      const fileName = `${item_id || "item"}_${uuidv4()}.${fileExt}`;
+      const fileName = `${item_id}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("lost-images")
@@ -119,7 +150,6 @@ adminRouter.post("/add_items", upload.single("image"), async (req, res) => {
       image_url = publicUrlData.publicUrl;
     }
 
-    // ✅ insert into Supabase DB
     const { data, error } = await supabase
       .from("Lost_items")
       .insert([
