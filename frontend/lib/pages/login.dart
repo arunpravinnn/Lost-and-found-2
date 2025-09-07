@@ -1,7 +1,6 @@
 import 'package:amrita_retriever/pages/lost_items_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,7 +12,6 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _isAdmin = false;
   bool _loading = false;
   String? _error;
 
@@ -23,34 +21,33 @@ class _LoginPageState extends State<LoginPage> {
       _error = null;
     });
 
-    final url = _isAdmin
-        ? Uri.parse('http://localhost:3000/api/admin/login')
-        : Uri.parse('http://localhost:3000/api/user/login');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': _emailController.text,
-        'password': _passwordController.text,
-        'role': _isAdmin ? 'admin' : 'user',
-      }),
-    );
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      if (response.user != null) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LostItemsScreen()),
+        );
+      } else {
+        setState(() {
+          _error = "Invalid email or password";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
 
     setState(() {
       _loading = false;
     });
-
-    if (response.statusCode == 200) {
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LostItemsScreen()),
-      );
-    } else {
-      setState(() {
-        _error = jsonDecode(response.body)['error'];
-      });
-    }
   }
 
   @override
@@ -75,7 +72,7 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             // 🔹 Your Logo Placeholder
             Image.asset(
-              'assets/logo.png', // <-- replace with your logo path
+              'assets/logo.png',
               height: 120,
             ),
             const SizedBox(height: 32),
@@ -112,23 +109,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               obscureText: true,
-            ),
-            const SizedBox(height: 12),
-
-            // 🔹 Admin Checkbox
-            Row(
-              children: [
-                Checkbox(
-                  value: _isAdmin,
-                  activeColor: primaryColor,
-                  onChanged: (val) {
-                    setState(() {
-                      _isAdmin = val ?? false;
-                    });
-                  },
-                ),
-                const Text('Login as Admin'),
-              ],
             ),
             const SizedBox(height: 20),
 
