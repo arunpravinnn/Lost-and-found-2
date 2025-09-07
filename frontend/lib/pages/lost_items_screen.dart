@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:amrita_retriever/pages/item_details_page.dart';
 import 'package:http/http.dart' as http;
