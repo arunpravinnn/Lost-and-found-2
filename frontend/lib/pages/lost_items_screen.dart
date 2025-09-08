@@ -31,7 +31,7 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
   Future<void> fetchItems() async {
     try {
       final response = await http.get(
-        Uri.parse("http://localhost:3000/api/user/get_items"),
+        Uri.parse("https://lost-and-found-es98.onrender.com/api/user/get_items"),
       );
 
       if (response.statusCode == 200) {
