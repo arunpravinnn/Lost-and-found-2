@@ -14,7 +14,7 @@ export default function AdminLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const data = await axios.post('http://localhost:3000/api/admin/login', { email, password });
+    const data = await axios.post('https://lost-and-found-es98.onrender.com/api/admin/login', { email, password });
     if (data.status == 401){
         alert("Login failed. Please check your credentials.");
         router.push("/signup");

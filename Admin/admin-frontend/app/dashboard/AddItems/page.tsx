@@ -65,7 +65,7 @@ export default function DashboardPage() {
 
     try {
       const { data } = await axios.post(
-        "http://localhost:3000/api/admin/add_items",
+        "https://lost-and-found-es98.onrender.com/api/admin/add_items",
         formData,
       );
       console.log("Item added successfully:", data);
