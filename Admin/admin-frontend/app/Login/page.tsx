@@ -17,7 +17,7 @@ export default function AdminLogin() {
     const data = await axios.post('https://lost-and-found-es98.onrender.com/api/admin/login', { email, password });
     if (data.status == 401){
         alert("Login failed. Please check your credentials.");
-        router.push("/signup");
+        /*router.push("/signup");*/
     }
     else if (data) {
        router.push("/dashboard");
@@ -93,12 +93,7 @@ export default function AdminLogin() {
           </button>
         </form>
 
-        <p className="text-center text-gray-600 text-sm mt-6">
-          Don&apos;t have an account?{" "}
-          <a href="/signup" className="text-indigo-600 hover:underline">
-            Sign Up
-          </a>
-        </p>
+        
       </div>
     </div>
   );

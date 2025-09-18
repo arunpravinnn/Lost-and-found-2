@@ -46,31 +46,6 @@ adminRouter.post("/login", async (req, res) => {
 });
 
 
-adminRouter.post("/signup", async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const { data, error } = await supabase
-      .from("Admin")
-      .insert([{ email, password: hashedPassword }])
-      .select();
-
-    if (error) {
-      return res.status(400).json({ error: error.message });
-    }
-
-    res.json({
-      message: "Admin Signup Successful",
-      admin: { email: data[0].email },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
 
 adminRouter.post("/add_items", upload.single("image"), async (req, res) => {
   try {
