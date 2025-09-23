@@ -1,10 +1,9 @@
 import express from "express";
-import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { supabase } from "../db/supabaseClient.js";
 
 const userRouter = express.Router();
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
@@ -24,7 +23,7 @@ userRouter.post("/signup", async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const { error } = await supabase
+``    const { error } = await supabase
       .from("Users")
       .insert([{ email, password: hashedPassword }]);
 
@@ -90,4 +89,4 @@ function verifyToken(req, res, next) {
   });
 }
 
-export default router;
+export default userRouter;
