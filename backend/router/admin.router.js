@@ -19,17 +19,41 @@ adminRouter.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const { data, error } = await supabase
+    // Try finding by email first
+    let { data, error } = await supabase
       .from("Admin")
       .select("*")
       .eq("email", email)
       .single();
 
+    // If not found by email, try username equals the provided email/username field
+    if ((error || !data) && !data) {
+      const retry = await supabase
+        .from("Admin")
+        .select("*")
+        .eq("username", email)
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error || !data) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    const isMatch = await bcrypt.compare(password, data.password);
+    const storedPassword = data.password || "";
+    const looksHashed = storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$");
+
+    let isMatch = false;
+    if (looksHashed) {
+      try {
+        isMatch = await bcrypt.compare(password, storedPassword);
+      } catch (_) {
+        isMatch = false;
+      }
+    } else {
+      isMatch = password === storedPassword;
+    }
 
     if (!isMatch) {
       return res.status(401).json({ error: "Invalid email or password" });
@@ -37,7 +61,7 @@ adminRouter.post("/login", async (req, res) => {
 
     res.json({
       message: "Admin Login Successful",
-      admin: { email: data.email },
+      admin: { email: data.email || data.username },
     });
   } catch (err) {
     console.error(err);
@@ -71,6 +95,7 @@ adminRouter.post("/signup", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 adminRouter.post("/add_items", upload.single("image"), async (req, res) => {
   try {
