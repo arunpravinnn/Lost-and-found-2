@@ -12,7 +12,7 @@ It consists of:
 
 🖥️ React Admin Dashboard (Admins)
 
-🔗 Node.js Backend with MongoDB & AWS S3
+🔗 Node.js Backend with Supabase
 
 The system ensures secure authentication, clean UI, and fast reporting/claiming of items.
 
