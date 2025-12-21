@@ -1,90 +1,103 @@
 "use client";
+
 import { useState } from "react";
 import axios from "axios";
-import { v4 as uuidv4 } from "uuid";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
-interface LostItem {
-  item_id: string;
+
+interface LostItemForm {
   item_name: string;
   description: string;
   location_lost: string;
-  date_lost: Date | null | string;
+  date_lost: string;
   reported_by_name: string;
-  securityQuestion: string;
   reported_by_roll: string;
-  created_post: Date | null | string;
+  security_question: string;
   answer: string;
-  image?: File | null;
+  created_post: string;
+  image: File | null;
 }
 
 export default function DashboardPage() {
-  const [lostItem, setLostItem] = useState<LostItem>({
-    item_id: uuidv4(),
+  const [lostItem, setLostItem] = useState<LostItemForm>({
     item_name: "",
     description: "",
-    date_lost: new Date(),
     location_lost: "",
+    date_lost: "",
     reported_by_name: "",
-    securityQuestion: "",
     reported_by_roll: "",
-    created_post: new Date(),
+    security_question: "",
     answer: "",
+    created_post: "",
     image: null,
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setLostItem({ ...lostItem, [name]: value });
+    setLostItem((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setLostItem({ ...lostItem, image: e.target.files[0] });
+    if (e.target.files?.[0]) {
+      setLostItem((prev) => ({ ...prev, image: e.target.files![0] }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    const formData = new FormData();
-    formData.append("item_id", lostItem.item_id);
-    formData.append("item_name", lostItem.item_name);
-    formData.append("description", lostItem.description);
-    formData.append("date_lost", String(lostItem.date_lost));
-    formData.append("location_lost", lostItem.location_lost);
-    formData.append("reported_by_name", lostItem.reported_by_name);
-    formData.append("reported_by_roll", lostItem.reported_by_roll);
-    formData.append("securityQuestion", lostItem.securityQuestion);
-    formData.append("answer", lostItem.answer);
-    formData.append("created_post", String(lostItem.created_post));
-    if (lostItem.image) {
-      formData.append("image", lostItem.image);
+    if (!lostItem.description || !lostItem.location_lost || !lostItem.date_lost || !lostItem.reported_by_name) {
+      alert("Please fill in all required fields");
+      return;
     }
+    const formData = new FormData();
 
+    Object.entries(lostItem).forEach(([key, value]) => {
+      if (value !== null) {
+        formData.append(key, value);
+      }
+    });
+    console.log(formData);
     try {
-      const { data } = await axios.post(
-        "https://lost-and-found-es98.onrender.com/api/admin/add_items",
-        formData,
-      );
-      console.log("Item added successfully:", data);
+      await axios.post("/api/admin/items/add", formData);
+
+      alert("Lost item added successfully");
 
       setLostItem({
-        item_id: "",
         item_name: "",
         description: "",
-        date_lost: new Date(),
         location_lost: "",
+        date_lost: "",
         reported_by_name: "",
         reported_by_roll: "",
-        securityQuestion: "",
+        security_question: "",
         answer: "",
-        created_post: new Date(),
+        created_post: "",
         image: null,
       });
-    } catch (error) {
-      console.error("Error uploading:", error);
+
+    } catch (error: any) {
+      console.log(error);
+      const msg = error.response?.data?.error || "Failed to add lost item";
+      alert(msg);
     }
   };
 
@@ -146,151 +159,162 @@ export default function DashboardPage() {
   ].sort();
 
   return (
-    <div className="space-y-6 flex flex-col items-center">
-      <h1 className="font-extrabold text-4xl">
-        Enter the details of the newly lost item
-      </h1>
-      <section className="flex gap-4 lg:grid-cols-3 w-full ">
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4 flex flex-col justify-center w-full"
-        >
-          <div>
-            <label className="block text-sm font-medium">Item Name</label>
-            <input
-              type="text"
-              name="item_name"
-              value={lostItem.item_name}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            />
-          </div>
+    <div className="flex justify-center px-4 py-10">
+      <Card className="w-full max-w-2xl shadow-lg rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold">
+            Report a Lost Item
+          </CardTitle>
+          <CardDescription>
+            Enter accurate details to help recover the lost item.
+          </CardDescription>
+        </CardHeader>
 
-          <div>
-            <label className="block text-sm font-medium">Description</label>
-            <input
-              type="text"
-              name="description"
-              value={lostItem.description}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            />
-          </div>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Item Name */}
+            <div className="space-y-2">
+              <Label htmlFor="item_name">Item Name</Label>
+              <Input
+                id="item_name"
+                name="item_name"
+                placeholder="e.g. Wallet, ID Card"
+                value={lostItem.item_name}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium">Date Lost</label>
-            <input
-              type="date"
-              name="date_lost"
-              value={lostItem.date_lost as string}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            />
-          </div>
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                placeholder="Color, brand, identifying marks..."
+                value={lostItem.description}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium">Created Post</label>
-            <input
-              type="datetime-local"
-              name="created_post"
-              value={lostItem.created_post as string}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            />
-          </div>
+            {/* Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date_lost">Date Lost</Label>
+                <Input
+                  type="date"
+                  id="date_lost"
+                  name="date_lost"
+                  value={lostItem.date_lost}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium">Location Lost</label>
-            <select
-              name="location_lost"
-              value={lostItem.location_lost}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            >
-              <option value="">Select a location</option>
-              {locations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="created_post">Post Created On</Label>
+                <Input
+                  type="datetime-local"
+                  id="created_post"
+                  name="created_post"
+                  value={lostItem.created_post}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium">Reported By Name</label>
-            <input
-              type="text"
-              name="reported_by_name"
-              value={lostItem.reported_by_name}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            />
-          </div>
+            {/* Location */}
+            <div className="space-y-2">
+              <Label>Location Lost</Label>
+              <Select
+                value={lostItem.location_lost}
+                onValueChange={(value) =>
+                  handleChange({
+                    target: { name: "location_lost", value } as any,
+                  } as any)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem key={location} value={location}>
+                      {location}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium">Reported By Roll</label>
-            <input
-              type="text"
-              name="reported_by_roll"
-              value={lostItem.reported_by_roll}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            />
-          </div>
+            {/* Reporter Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="reported_by_name">Reported By</Label>
+                <Input
+                  id="reported_by_name"
+                  name="reported_by_name"
+                  placeholder="Full Name"
+                  value={lostItem.reported_by_name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium">
-              Security Question
-            </label>
-            <input
-              type="text"
-              name="securityQuestion"
-              value={lostItem.securityQuestion}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="reported_by_roll">Roll Number</Label>
+                <Input
+                  id="reported_by_roll"
+                  name="reported_by_roll"
+                  placeholder="Optional"
+                  value={lostItem.reported_by_roll}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium">Answer</label>
-            <input
-              type="text"
-              name="answer"
-              value={lostItem.answer}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-            />
-          </div>
+            {/* Security Question */}
+            <div className="space-y-2">
+              <Label htmlFor="security_question">Security Question</Label>
+              <Input
+                id="security_question"
+                name="security_question"
+                placeholder="A question only the owner can answer"
+                value={lostItem.security_question}
+                onChange={handleChange}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium">
-              Upload the image of the lost item
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="border-1 border-black p-3 rounded-2xl"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="answer">Answer</Label>
+              <Input
+                id="answer"
+                name="answer"
+                placeholder="Answer to the security question"
+                value={lostItem.answer}
+                onChange={handleChange}
+              />
+            </div>
 
-          <button
-            type="submit"
-            className="mt-4 bg-blue-500 text-white rounded-md p-2"
-          >
-            Submit
-          </button>
-        </form>
-      </section>
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <Label>Item Image</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+            </div>
+
+            {/* Submit */}
+            <Button type="submit" className="w-full text-base">
+              Submit Lost Item
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,10 +1,8 @@
-// app/admin/login/page.tsx (Next.js 13+ with App Router)
-
 "use client";
 
 import { useState } from "react";
 import axios from "axios";
-import { useRouter } from "next/navigation";
+import { redirect,useRouter } from "next/navigation";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -14,17 +12,14 @@ export default function AdminLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post(
-        'https://lost-and-found-es98.onrender.com/api/admin/login',
-        { email, password }
-      );
+      const response = await axios.post("/api/admin/auth/login", { email, password });
+      console.log(response);
 
       if (response.status === 200) {
-        router.push("/dashboard");
-        return;
+        // Use absolute path
+        console.log("success")
+        router.replace("/dashboard");
       }
-
-      alert("Login failed. Please check your credentials.");
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
@@ -35,6 +30,7 @@ export default function AdminLogin() {
           alert(message || "Unable to login right now. Please try again.");
         }
       } else {
+        console.log(error);
         alert("Unexpected error occurred. Please try again.");
       }
     }

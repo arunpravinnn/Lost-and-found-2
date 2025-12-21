@@ -1,98 +1,89 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import axios from "axios";
+import React, { useEffect, useState } from "react";
 
-type LostItems = {
-    item_id: string;
-    item_name: string;
-    description: string;
-    location_lost: string;
-    date_lost: string;
-    reported_by_name: string;
-    reported_by_roll: string;
-    created_post: string;
-    image_url: string;
-    claimed_by:string | null;
+type ClaimedBy = {
+  email: string;
+  user_id: string;
+};
+
+type LostItem = {
+  item_id: string;
+  item_name: string;
+  description: string;
+  location_lost: string;
+  date_lost: string;
+  reported_by_name: string;
+  reported_by_roll: string | null;
+  created_post: string;
+  image_url: string;
+  claimed_by: ClaimedBy | null;
 };
 
 const LostItems: React.FC = () => {
-    const [lostItems, setLostItems] = useState<LostItems[]>([]);
-    const [loading, setLoading] = useState(true);
+  const [lostItems, setLostItems] = useState<LostItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchLostItems = async () => {
-            const { data, error } = await supabase
-                .from('Lost_items')
-                .select('item_id, item_name, description, location_lost, date_lost, reported_by_name, reported_by_roll, created_post, image_url,claimed_by');
-            if (!error && data) {
-                setLostItems(data);
-                console.log(data);
-            }
-            setLoading(false);
-        };
-        fetchLostItems();
-    }, []);
+  useEffect(() => {
+    const fetchLostItems = async () => {
+      try {
+        const response = await axios.get("/api/admin/items/list", {
+          withCredentials: true,
+        });
 
-    if (loading) return <div>Loading...</div>;
+        setLostItems(response.data);
+      } catch (error) {
+        console.error("Failed to fetch lost items", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return (
-        <>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-            {lostItems.map(item => (
-                item.claimed_by === null &&
-                <div
-                    key={item.item_id}
-                    style={{
-                        border: '1px solid #ccc',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        minWidth: '220px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                    }}
-                >
-                    <img src={item.image_url} alt={item.item_name} className='object-cover w-32 flex items-center justify-center'  />
-                    <p className='text-md font-bold'>Item Name: {item.item_name}</p>
-                    <p className='text-md font-bold'>Description: {item.description}</p>
-                    <p className='text-md font-bold'>Location Lost: {item.location_lost}</p>
-                    <p className='text-md font-bold'>Date Lost: {item.date_lost}</p>
-                    <p className='text-md font-bold'>Reported By: {item.reported_by_name} ({item.reported_by_roll ? item.reported_by_roll : 'Unknown'})</p>
-                    <p className='text-md font-bold'>Created Post: {item.created_post}</p>
-                    <p className='text-md font-bold'>Claimed By: {item.claimed_by ? item.claimed_by['email'] : 'Unknown'}</p>
-                </div>
+    fetchLostItems();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div>
+        <h2 className="font-semibold mb-4 text-xl">Pending Items</h2>
+        <div className="flex flex-wrap gap-4">
+          {lostItems
+            .filter((item) => !item.claimed_by)
+            .map((item) => (
+              <div key={item.item_id} className="border rounded-lg p-4 min-w-[220px] shadow-sm bg-white">
+                <img src={item.image_url} alt={item.item_name} className="w-full h-40 object-cover rounded-md mb-2" />
+                <p><b>Item:</b> {item.item_name}</p>
+                <p><b>Description:</b> {item.description}</p>
+                <p><b>Location:</b> {item.location_lost}</p>
+                <p><b>Date:</b> {item.date_lost}</p>
+                <p><b>Reported By:</b> {item.reported_by_name}</p>
+              </div>
             ))}
+          {lostItems.filter((item) => !item.claimed_by).length === 0 && <p className="text-gray-500">No pending items.</p>}
         </div>
-        <div className='font-semibold mt-8 mb-4 flex gap-4 flex-wrap'>
-            <div className='w-full border-1 flex gap-4 items-center justify-center h-20 border-zinc-900 p-2 rounded-xl mb-6 bg-gray-300'>Claimed Items</div>
-            {lostItems.map(item => (
-                item.claimed_by != null &&
-                <div
-                    key={item.item_id}
-                    style={{
-                        border: '1px solid #ccc',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        minWidth: '220px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                        width: '500px',
-                    }}
-                >
-                    <img src={item.image_url} alt={item.item_name} className='object-cover w-32 flex items-center justify-center'  />
-                    <p className='text-md font-bold'>Item Name: {item.item_name}</p>
-                    <p className='text-md font-bold'>Description: {item.description}</p>
-                    <p className='text-md font-bold'>Location Lost: {item.location_lost}</p>
-                    <p className='text-md font-bold'>Date Lost: {item.date_lost}</p>
-                    <p className='text-md font-bold'>Reported By: {item.reported_by_name} ({item.reported_by_roll ? item.reported_by_roll : 'Unknown'})</p>
-                    <p className='text-md font-bold'>Created Post: {item.created_post}</p>
-                    <p className='text-md font-bold'>Claimed By: {item.claimed_by ? item.claimed_by['email'] : 'Unknown'}</p>
-                </div>
+      </div>
+
+      <div>
+        <h2 className="font-semibold mb-4 text-xl">Claimed Items</h2>
+        <div className="flex flex-wrap gap-4">
+          {lostItems
+            .filter((item) => item.claimed_by)
+            .map((item) => (
+              <div key={item.item_id} className="border rounded-lg p-4 min-w-[220px] shadow-sm bg-gray-50 opacity-80">
+                <img src={item.image_url} alt={item.item_name} className="w-full h-40 object-cover rounded-md mb-2 grayscale" />
+                <p><b>Item:</b> {item.item_name}</p>
+                <p><b>Claimed By:</b> {item.claimed_by?.email}</p>
+                <p className="text-xs text-green-600 font-bold mt-2">RESOLVED</p>
+              </div>
             ))}
+          {lostItems.filter((item) => item.claimed_by).length === 0 && <p className="text-gray-500">No claimed items yet.</p>}
         </div>
-        </>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default LostItems;
