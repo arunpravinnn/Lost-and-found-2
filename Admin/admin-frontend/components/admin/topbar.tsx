@@ -19,7 +19,7 @@ export default function Topbar() {
               <Menu className="size-4" aria-hidden />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0">
+          <SheetContent side="bottom" className="p-0">
             <SheetHeader className="sr-only">
               <SheetTitle>Navigation</SheetTitle>
             </SheetHeader>
