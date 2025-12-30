@@ -4,21 +4,40 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LayoutDashboard, PlusCircleIcon, Users, Settings, ShoppingBasket } from "lucide-react"
+import { useEffect, useState } from "react"
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/AddItems", label: "Add Items", icon: PlusCircleIcon },
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/lostitems", label: "Lost Items", icon: ShoppingBasket },
+  {href: "/dashboard/chat", label: "Chat", icon: Settings},
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const [randomAvatar, setRandomAvatar] = useState<string | null>(null);
 
+  useEffect(() => {
+    // const idx = Math.floor(Math.random()*100 + 1);
+    const randomAvatar = `https://www.gravatar.com/avatar/d6a63dc771c20f8a0b%E2%80%A6f3c1eeab2ffe8228e8a98ae2cc781eeb?s=201&d=robohash`;
+    setRandomAvatar(randomAvatar)
+  },[])
+  
   return (
     <nav className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b p-4">
-        <div className="size-8 rounded-md bg-blue-600" aria-hidden />
+        <div className="w-full h-6 relative">
+          {randomAvatar ? (
+            <img
+              src={randomAvatar}
+              alt="Avatar"
+              className="absolute w-full h-full object-contain scale-220 rounded-md border"
+            />
+          ) : (
+            <div className="bg-blue-600 w-full h-full" /> 
+          )}
+        </div>
         <div>
           <p className="leading-none font-semibold">{""}</p>
           <p className="text-xs text-muted-foreground">{""}</p>

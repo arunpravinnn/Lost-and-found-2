@@ -7,9 +7,20 @@ import Sidebar from "./sidebar"
 import { Menu, Bell } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
 import { useRouter } from "next/navigation"
+import axios from "axios"
 
 export default function Topbar() {
   const router = useRouter();
+  const handleLogout = async () => {
+    try {
+      await axios.post("/api/admin/auth/logout")
+    } catch (error) {
+      console.error("Logout failed:", error)
+    }
+    router.replace("/Login")
+    router.refresh()
+    window.history.pushState(null, "", "/Login")
+  }
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 md:px-6">
@@ -19,7 +30,7 @@ export default function Topbar() {
               <Menu className="size-4" aria-hidden />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0">
+          <SheetContent side="bottom" className="p-0">
             <SheetHeader className="sr-only">
               <SheetTitle>Navigation</SheetTitle>
             </SheetHeader>
@@ -38,9 +49,7 @@ export default function Topbar() {
             <Bell className="size-4" aria-hidden />
           </Button>
           <ThemeToggle />
-          <Button variant="default" size="default" aria-label="Notifications" onClick={() => {
-            router.replace("/Login");
-          }}>
+          <Button variant="default" size="default" aria-label="Notifications" onClick={handleLogout}>
             Logout
           </Button>
         </div>

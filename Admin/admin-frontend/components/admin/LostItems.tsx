@@ -53,7 +53,7 @@ const LostItems: React.FC = () => {
           {lostItems
             .filter((item) => !item.claimed_by)
             .map((item) => (
-              <div key={item.item_id} className="border rounded-lg p-4 min-w-[220px] shadow-sm bg-white">
+              <div key={item.item_id} className="dark:bg-zinc-600 border rounded-lg p-4 min-w-[220px] shadow-sm">
                 <img src={item.image_url} alt={item.item_name} className="w-full h-40 object-cover rounded-md mb-2" />
                 <p><b>Item:</b> {item.item_name}</p>
                 <p><b>Description:</b> {item.description}</p>
@@ -62,7 +62,7 @@ const LostItems: React.FC = () => {
                 <p><b>Reported By:</b> {item.reported_by_name}</p>
               </div>
             ))}
-          {lostItems.filter((item) => !item.claimed_by).length === 0 && <p className="text-gray-500">No pending items.</p>}
+          {lostItems.filter((item) => !item.claimed_by).length === 0 && <p>No pending items.</p>}
         </div>
       </div>
 
@@ -72,14 +72,14 @@ const LostItems: React.FC = () => {
           {lostItems
             .filter((item) => item.claimed_by)
             .map((item) => (
-              <div key={item.item_id} className="border rounded-lg p-4 min-w-[220px] shadow-sm bg-gray-50 opacity-80">
+              <div key={item.item_id} className="text-background border rounded-lg p-4 min-w-[220px] shadow-sm  opacity-80">
                 <img src={item.image_url} alt={item.item_name} className="w-full h-40 object-cover rounded-md mb-2 grayscale" />
                 <p><b>Item:</b> {item.item_name}</p>
                 <p><b>Claimed By:</b> {item.claimed_by?.email}</p>
                 <p className="text-xs text-green-600 font-bold mt-2">RESOLVED</p>
               </div>
             ))}
-          {lostItems.filter((item) => item.claimed_by).length === 0 && <p className="text-gray-500">No claimed items yet.</p>}
+          {lostItems.filter((item) => item.claimed_by).length === 0 && <p>No claimed items yet.</p>}
         </div>
       </div>
     </div>
