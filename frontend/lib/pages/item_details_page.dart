@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ItemDetailsPage extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -11,7 +11,6 @@ class ItemDetailsPage extends StatefulWidget {
   State<ItemDetailsPage> createState() => _ItemDetailsPageState();
 }
 const String authSupabaseUrl = "https://etdewmgrpvoavevlpibg.supabase.co";
-
 class _ItemDetailsPageState extends State<ItemDetailsPage> {
   bool _claimed = false;
   bool _isLoading = true;
@@ -23,34 +22,58 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
   }
 
   Future<void> _checkIfAlreadyClaimed() async {
-    final supabase = SupabaseClient(
-      authSupabaseUrl,
-      dotenv.env['SUPABASE_ANON_KEY']!
-    );
-
     try {
+      final supabase = SupabaseClient(
+        authSupabaseUrl,
+        dotenv.env['SUPABASE_ANON_KEY']!
+      );
+
       final response = await supabase
           .from("Lost_items")
-          .select("claimed, claimed_by")
+          .select("claimed")
           .eq("item_id", widget.item["item_id"])
           .maybeSingle();
 
-      if (mounted) {
-        setState(() {
-          _claimed = response != null &&
-              (response["claimed"] == true || response["claimed_by"] != null);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _claimed = response != null && response["claimed"] == true;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
     }
   }
 
+  Future<void> _claimItem(String answer) async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      throw Exception("You must be logged in to claim the item");
+    }
+
+    // 🔐 Store answer temporarily in JWT metadata (used by RLS)
+    await supabase.auth.updateUser(
+      UserAttributes(data: {"answer": answer}),
+    );
+
+    final result = await supabase
+        .from("Lost_items")
+        .update({
+          "claimed": true,
+          "claimed_by": user.email,
+          "claimed_at": DateTime.now().toIso8601String(),
+        })
+        .eq("item_id", widget.item["item_id"]);
+
+    if (result.isEmpty) {
+      throw Exception("Incorrect answer or item already claimed");
+    }
+  }
+
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
