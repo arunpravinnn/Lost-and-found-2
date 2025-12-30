@@ -9,7 +9,7 @@ Future<void> main() async {
   // Load environment variables
   await dotenv.load(fileName: ".env");
 
-  // ✅ Initialize Supabase here using env vars
+  //  Initialize Supabase here using env vars
   await Supabase.initialize(
     url: dotenv.env['NEXT_PUBLIC_SUPABASE_URL']!,
     anonKey: dotenv.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!,
