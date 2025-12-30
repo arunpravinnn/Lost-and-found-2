@@ -18,12 +18,60 @@ Future<void> main() async {
   runApp(const AmritaRetrieverApp());
 }
 
-class AmritaRetrieverApp extends StatelessWidget {
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
+class AmritaRetrieverApp extends StatefulWidget {
   const AmritaRetrieverApp({super.key});
+
+  @override
+  State<AmritaRetrieverApp> createState() => _AmritaRetrieverAppState();
+}
+
+class _AmritaRetrieverAppState extends State<AmritaRetrieverApp> {
+  final supabase = Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupRealtimeSubscription();
+  }
+
+  void _setupRealtimeSubscription() {
+    supabase
+        .channel('public:Lost_items')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'Lost_items',
+          callback: (payload) {
+            final newItem = payload.newRecord;
+            final message = newItem['location_lost'] != null 
+                ? "New item lost at ${newItem['location_lost']}"
+                : "New item lost!";
+            
+            scaffoldMessengerKey.currentState?.showSnackBar(
+              SnackBar(
+                content: Text(message),
+                duration: const Duration(seconds: 4),
+                behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(
+                  label: 'VIEW',
+                  onPressed: () {
+                    // Navigate to details if needed, 
+                    // for now just close
+                  },
+                ),
+              ),
+            );
+          },
+        )
+        .subscribe();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Amrita Retriever',
       theme: ThemeData(

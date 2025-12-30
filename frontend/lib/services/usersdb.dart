@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Thin client for the users database endpoints.
 class UsersDbClient {
@@ -72,7 +73,7 @@ class UsersDbClient {
 String _defaultBaseUrl() {
   // For web builds we can use relative path, for mobile/desktop use localhost by default
   // Update to point to the Admin Frontend deployment usually on port 3000 or the hosted URL
-  return 'http://localhost:3000/api/user';
+  return dotenv.env['NEXT_PUBLIC_SUPABASE_URL'] ?? 'http://localhost:3000/api/user';
 }
 
 class RegisterResponse {
