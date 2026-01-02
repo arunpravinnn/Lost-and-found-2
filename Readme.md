@@ -94,5 +94,5 @@ Then, run the following:
 https://lost-and-found-rose-phi.vercel.app/
 
 Test Login Credentials:
-` email : admin@lostandfound.com
-password: adminlostandfound `
+`email : admin@lostandfound.com`
+`password: adminlostandfound`
