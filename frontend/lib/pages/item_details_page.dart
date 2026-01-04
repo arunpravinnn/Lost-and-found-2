@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ItemDetailsPage extends StatefulWidget {
   final Map<String, dynamic> item;
-  final int currentUserId;
+  final String currentUserId;
 
   const ItemDetailsPage({super.key, required this.item, required this.currentUserId});
 
@@ -15,55 +15,72 @@ class ItemDetailsPage extends StatefulWidget {
 
 class _ItemDetailsPageState extends State<ItemDetailsPage> {
   final _postsDb = PostsDbClient();
-  final int? currentUserId = Supabase.instance.client.auth.currentUser?.id as int?; // This might be null or String depending on setup. 
-  // Wait, our User ID is integer in 'users' table but Auth ID is UUID in Supabase Auth.
-  // BUT we are using CUSTOM AUTH. So 'currentUserId' needs to be passed or stored.
-  // In `HomePage`, we passed `userId`. But here we navigated from a list item.
-  // We need to store logged-in User ID globally or fetch it.
-  // For now, I will assume we can't easily check "Edit" permission without the ID. 
-  // I'll add a TODO or try to fetch it from a Provider if we had one.
-  // Actually, `main.dart` doesn't hold state. `HomePage` does.
-  // I'll skip the "Edit visibility" check for now or just allow it if I can match something.
-  // ACTUALLY, I can't check ownership without the logged in user ID.
-  // Let's assume for this "Revamp" I will just show the Edit button for demonstration or if I can verify.
-  // Better approach: I'll fetch user email from `usersdb` using the stored session if I had one.
-  // Since I don't have a global user state, I will omit the "Edit" button condition (show to all, but fail on save if unauthorized? No, RLS handles that).
-  // I will just implement the UI and functionality.
+  final supabase = Supabase.instance.client;
   
+  // Realtime channel variable
+  late RealtimeChannel _commentChannel;
+
   bool _verifying = false;
   Map<String, dynamic>? _revealedContact;
   List<Map<String, dynamic>> _comments = [];
   final TextEditingController _commentController = TextEditingController();
   bool _loadingComments = true;
-  int? _replyingToId; // ID of the comment being replied to
-  String? _replyingToName; // Name of the user being replied to
+  int? _replyingToId; 
+  String? _replyingToName;
 
   @override
   void initState() {
     super.initState();
     _fetchComments();
+    _setupRealtime(); // Initialize Realtime Listener
+  }
+
+  @override
+  void dispose() {
+    // Critical: Unsubscribe from the channel when leaving the page
+    supabase.removeChannel(_commentChannel);
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  /// Sets up the Realtime subscription for the comments table
+  void _setupRealtime() {
+    _commentChannel = supabase
+        .channel('public:comments:post_${widget.item['post_id']}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'comments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'post_id',
+            value: widget.item['post_id'],
+          ),
+          callback: (payload) {
+            // When a new comment is detected, we re-fetch to get 
+            // the relational data (user names) properly.
+            _fetchComments(); 
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _fetchComments() async {
-    final comments = await _postsDb.getComments(widget.item['post_id']);
-    if (mounted) {
-      setState(() {
-        _comments = comments;
-        _loadingComments = false;
-      });
+    try {
+      final comments = await _postsDb.getComments(widget.item['post_id']);
+      if (mounted) {
+        setState(() {
+          _comments = comments;
+          _loadingComments = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching comments: $e");
     }
   }
 
   Future<void> _addComment() async {
     if (_commentController.text.trim().isEmpty) return;
-    
-    // We need userId to comment. 
-    // Since I don't have it easily accessible here (flaw in my nav structure),
-    // I will prompt for it or just fail gracefully?
-    // Wait, the prompt said "User who posted... edit... and add comments".
-    // I will try to use a hardcoded ID or fix the nav structure later.
-    // For now, let's assume User ID 1 for testing or similar.
-    // OR create a `UserSession` singleton.
     
     try {
        await _postsDb.addComment(
@@ -72,18 +89,23 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
          _commentController.text.trim(),
          parentId: _replyingToId
        );
-       _commentController.clear();
-       setState(() {
-         _replyingToId = null;
-         _replyingToName = null;
-       });
-       _fetchComments();
+       
+       if (mounted) {
+         _commentController.clear();
+         setState(() {
+           _replyingToId = null;
+           _replyingToName = null;
+         });
+         // Note: We don't call _fetchComments() here because 
+         // the Realtime listener will trigger it for us.
+       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to comment: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to comment: $e"))
+      );
     }
   }
-  
-  // ... (Security and Launch logic same as before, just updated UI)
+
   Future<void> _verifySecurityAnswer(String answer) async {
     setState(() => _verifying = true);
     try {
@@ -94,7 +116,9 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Verification failed: $e"), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Verification failed: $e"), backgroundColor: Colors.red)
+      );
     } finally {
       if (mounted) setState(() => _verifying = false);
     }
@@ -112,7 +136,8 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
           children: [
             const Text("Answer the security question to reveal contact info."),
             const SizedBox(height: 12),
-            Text("Question: ${widget.item['security_question'] ?? 'N/A'}", style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text("Question: ${widget.item['security_question'] ?? 'N/A'}", 
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             TextField(controller: controller, decoration: const InputDecoration(labelText: "Your Answer")),
           ],
@@ -121,7 +146,9 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () => _verifySecurityAnswer(controller.text),
-            child: _verifying ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text("Submit"),
+            child: _verifying 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
+              : const Text("Submit"),
           ),
         ],
       ),
@@ -130,7 +157,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
 
   Future<void> _launchWhatsApp(String? phone) async {
     if (phone == null) return;
-    // Basic cleaning
     String number = phone.replaceAll(RegExp(r'\D'), ''); 
     final Uri url = Uri.parse("https://wa.me/$number");
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
@@ -167,7 +193,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
         widget.item['status'] = 'CLOSED';
         widget.item['resolved_by'] = resolvedBy;
       });
-      Navigator.pop(context); // Close dialog
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Post marked as closed.")));
     } catch (e) {
       Navigator.pop(context);
@@ -212,7 +238,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
     );
   }
 
-  // Helper getters
   bool get _isOwner => widget.item['user_id'] == widget.currentUserId;
   bool get _isClosed => widget.item['status'] == 'CLOSED';
 
@@ -229,15 +254,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                   ? Image.network(widget.item['image_url'], fit: BoxFit.cover)
                   : Container(color: Colors.grey[200], child: const Icon(Icons.image, size: 80, color: Colors.grey)),
             ),
-            actions: [
-              // Edit Button (Ideally check ownership)
-              IconButton(
-                icon: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.edit, color: Colors.black)),
-                onPressed: () {
-                   // Navigate to Edit Page
-                },
-              )
-            ],
           ),
           SliverToBoxAdapter(
             child: Padding(
@@ -250,7 +266,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                       Expanded(
                         child: Text(
                           widget.item['item_name'] ?? "Unknown Item",
-                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, height: 1.2),
+                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                         ),
                       ),
                       Container(
@@ -258,7 +274,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                         decoration: BoxDecoration(
                           color: _isClosed ? Colors.grey : (widget.item['post_type'] == 'LOST' ? Colors.red[50] : Colors.green[50]),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _isClosed ? Colors.grey : (widget.item['post_type'] == 'LOST' ? Colors.red : Colors.green)),
                         ),
                         child: Text(
                           _isClosed ? "CLOSED" : (widget.item['post_type'] ?? "UNKNOWN"),
@@ -271,67 +286,33 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Closed Banner
-                  if (_isClosed)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 20),
-                      padding: const EdgeInsets.all(12),
-                      width: double.infinity,
-                      decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.green)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                           const Row(children: [Icon(Icons.check_circle, color: Colors.green, size: 20), SizedBox(width: 8), Text("This item is resolved.", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))]),
-                           if (widget.item['resolved_by'] != null)
-                             Padding(padding: const EdgeInsets.only(top: 4, left: 28), child: Text("Resolved by: ${widget.item['resolved_by']}", style: TextStyle(color: Colors.green[800]))),
-                        ],
-                      ),
-                    ),
-                  
-                  // Description
                   Text(
                     widget.item['description'] ?? "No description provided.",
                     style: TextStyle(fontSize: 16, color: Colors.grey[800], height: 1.6),
                   ),
-
                   const SizedBox(height: 20),
                   
-                  // Meta Info (Posted By / Time)
+                  // Posted By Info
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
                     child: Row(
                       children: [
                         const Icon(Icons.access_time, size: 20, color: Colors.grey),
                         const SizedBox(width: 8),
-                        Text(
-                          _formatDate(widget.item['created_at']),
-                          style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
-                        ),
+                        Text(_formatDate(widget.item['created_at']), style: const TextStyle(color: Colors.grey)),
                         const SizedBox(width: 16),
                         const Icon(Icons.person_outline, size: 20, color: Colors.grey),
                         const SizedBox(width: 8),
-                        Expanded(
-                            child: Text(
-                              "Posted by: ${widget.item['users']?['name'] ?? 'Unknown'}",
-                              style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ),
+                        Text("By: ${widget.item['users']?['name'] ?? 'Unknown'}", style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
                   ),
                   
                   const SizedBox(height: 32),
-                  
-                  // Contact Section
+
+                  // Contact Reveal Logic
                   if (_revealedContact != null) ...[
-                    const Text("Contact Owner", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
                     Row(
                       children: [
                          Expanded(
@@ -339,7 +320,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                              onPressed: () => _launchWhatsApp(_revealedContact!['owner_phone']),
                              icon: const Icon(Icons.chat),
                              label: const Text("WhatsApp"),
-                             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
+                             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white),
                            ),
                          ),
                          const SizedBox(width: 12),
@@ -348,7 +329,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                              onPressed: () => _launchEmail(_revealedContact!['owner_email']),
                              icon: const Icon(Icons.email),
                              label: const Text("Email"),
-                             style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
+                             style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
                            ),
                          ),
                       ],
@@ -360,45 +341,29 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                         onPressed: _showSecurityDialog,
                         icon: const Icon(Icons.lock_open_rounded),
                         label: const Text("Reveal Contact Info"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFD5316B),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD5316B), foregroundColor: Colors.white),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Center(child: Text("Answer the security question to verify ownership.", style: TextStyle(color: Colors.grey, fontSize: 12))),
                   ],
 
-                  // Owner Actions: Mark as Solved
                   if (_isOwner && !_isClosed) ...[
-                     const SizedBox(height: 30),
+                     const SizedBox(height: 20),
                      SizedBox(
                        width: double.infinity,
                        child: OutlinedButton.icon(
                          onPressed: _showResolveDialog,
                          icon: const Icon(Icons.check_circle_outline),
                          label: const Text("Mark as Solved"),
-                         style: OutlinedButton.styleFrom(
-                           padding: const EdgeInsets.symmetric(vertical: 16),
-                           foregroundColor: Colors.green,
-                           side: const BorderSide(color: Colors.green)
-                         ),
+                         style: OutlinedButton.styleFrom(foregroundColor: Colors.green),
                        ),
                      )
                   ],
 
-                  const SizedBox(height: 40),
-                  const Divider(),
-                  const SizedBox(height: 20),
-                  
-                  // Comments Section
+                  const Divider(height: 60),
                   const Text("Comments", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
                   
-                  // Reply Indicator
+                  // Reply Banner
                   if (_replyingToName != null)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -418,77 +383,33 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                       ),
                     ),
 
-                  // Add Comment Input
+                  // Comment Input
                   Row(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _commentController,
-                          decoration: const InputDecoration(
-                            hintText: "Write a comment...",
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                          ),
+                          decoration: const InputDecoration(hintText: "Write a comment..."),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      IconButton.filled(
+                      IconButton(
                         onPressed: _addComment,
-                        icon: const Icon(Icons.send),
-                        style: IconButton.styleFrom(backgroundColor: const Color(0xFFD5316B)),
+                        icon: const Icon(Icons.send, color: Color(0xFFD5316B)),
                       )
                     ],
                   ),
+                  
                   const SizedBox(height: 20),
                   
                   if (_loadingComments)
                     const Center(child: CircularProgressIndicator())
-                  else if (_comments.isEmpty)
-                    const Text("No comments yet. Be the first!", style: TextStyle(color: Colors.grey))
                   else
-                    Builder(
-                      builder: (context) {
-                        // 1. Organize comments into parents and children
-                        final parents = _comments.where((c) => c['parent_id'] == null).toList();
-                        final childrenMap = <int, List<Map<String, dynamic>>>{};
-                        
-                        for (var c in _comments.where((c) => c['parent_id'] != null)) {
-                          final pId = c['parent_id'] as int;
-                          if (childrenMap[pId] == null) childrenMap[pId] = [];
-                          childrenMap[pId]!.add(c);
-                        }
-
-                        return ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: parents.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            final parent = parents[index];
-                            final parentId = parent['comment_id'] as int;
-                            final children = childrenMap[parentId] ?? [];
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildCommentTile(parent),
-                                if (children.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 32, top: 8),
-                                    child: Column(
-                                      children: children.map((c) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 8),
-                                        child: _buildCommentTile(c, isReply: true),
-                                      )).toList(),
-                                    ),
-                                  )
-                              ],
-                            );
-                          },
-                        );
-                      }
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _comments.length,
+                      itemBuilder: (context, index) => _buildCommentTile(_comments[index]),
                     ),
-                    
-                    const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -498,8 +419,10 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
     );
   }
 
-  Widget _buildCommentTile(Map<String, dynamic> c, {bool isReply = false}) {
+  Widget _buildCommentTile(Map<String, dynamic> c) {
+    bool isReply = c['parent_id'] != null;
     return Container(
+      margin: EdgeInsets.only(left: isReply ? 30 : 0, bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isReply ? Colors.grey[50] : Colors.white,
@@ -510,29 +433,23 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: isReply ? Colors.grey[300] : const Color(0xFFD5316B).withOpacity(0.1),
-                child: Text(c['users']?['name']?[0]?.toUpperCase() ?? "U", style: TextStyle(fontSize: 12, color: isReply ? Colors.black : const Color(0xFFD5316B), fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 8),
               Text(c['users']?['name'] ?? "User", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              const Spacer(),
-              if (!isReply) // Allow reply only to top level for simplicity, or allow nesting? Let's allow nesting visually but flat structure technically or 1-level deep.
-                 InkWell(
-                   onTap: () {
-                     setState(() {
-                       _replyingToId = c['comment_id'];
-                       _replyingToName = c['users']?['name'];
-                     });
-                   },
-                   child: const Text("Reply", style: TextStyle(color: Color(0xFFD5316B), fontSize: 12, fontWeight: FontWeight.bold)),
-                 ),
+              if (!isReply) // Only allow replying to top-level comments to avoid deep nesting complexity for now
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _replyingToId = c['comment_id'];
+                      _replyingToName = c['users']?['name'];
+                    });
+                  },
+                  child: const Text("Reply", style: TextStyle(color: Color(0xFFD5316B), fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(c['content'] ?? "", style: TextStyle(color: Colors.grey[800], fontSize: 13)),
+          const SizedBox(height: 4),
+          Text(c['content'] ?? ""),
         ],
       ),
     );

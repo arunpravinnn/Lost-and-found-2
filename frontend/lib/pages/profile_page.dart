@@ -4,7 +4,7 @@ import 'package:amrita_retriever/services/postsdb.dart';
 import 'package:amrita_retriever/pages/item_details_page.dart';
 
 class ProfilePage extends StatefulWidget {
-  final int userId;
+  final String userId;
   const ProfilePage({super.key, required this.userId});
 
   @override

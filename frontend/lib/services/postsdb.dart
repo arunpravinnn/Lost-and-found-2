@@ -21,7 +21,7 @@ class PostsDbClient {
   }
 
   // Create Post
-  Future<void> createPost(Map<String, dynamic> data, int userId) async {
+  Future<void> createPost(Map<String, dynamic> data, String userId) async {
     try {
       final insertData = {
         'user_id': userId,
@@ -53,7 +53,7 @@ class PostsDbClient {
           .single();
 
       final String? correctAnswer = postRes['security_answer'];
-      final int ownerId = postRes['user_id'];
+      final String ownerId = postRes['user_id'];
 
       if (correctAnswer == null) {
         throw PostsDbException(message: "This item has no security question.");
@@ -103,7 +103,7 @@ class PostsDbClient {
   }
 
   // Add Comment
-  Future<void> addComment(int postId, int userId, String content, {int? parentId}) async {
+  Future<void> addComment(int postId, String userId, String content, {int? parentId}) async {
     try {
       await supabase.from('comments').insert({
         'post_id': postId,
@@ -116,7 +116,7 @@ class PostsDbClient {
     }
   }
   // Fetch user's posts
-  Future<List<Map<String, dynamic>>> getUserPosts(int userId) async {
+  Future<List<Map<String, dynamic>>> getUserPosts(String userId) async {
     try {
       final response = await supabase
           .from('posts')
@@ -130,7 +130,7 @@ class PostsDbClient {
   }
 
   // Fetch comments on user's posts (Activity)
-  Future<List<Map<String, dynamic>>> getUserActivity(int userId) async {
+  Future<List<Map<String, dynamic>>> getUserActivity(String userId) async {
     try {
       // 1. Get all post IDs by this user
       final posts = await supabase.from('posts').select('post_id, item_name').eq('user_id', userId);

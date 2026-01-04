@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:amrita_retriever/services/postsdb.dart';
 
 class AddFoundItemPage extends StatefulWidget {
-  final int userId;
+  final String userId;
   const AddFoundItemPage({super.key, required this.userId});
 
   @override
@@ -49,21 +49,25 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
     if (_selectedImage == null) return null;
 
     final fileExt = _selectedImage!.name.split('.').last;
-    final fileName = '${DateTime.now().toIso8601String()}_$userIdStr.$fileExt';
-    final filePath = 'posts/$fileName'; // Store in posts folder
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}_$userIdStr.$fileExt';
+    final filePath = 'images/$fileName'; 
 
     try {
       final bytes = await _selectedImage!.readAsBytes();
+      
       await Supabase.instance.client.storage
-          .from('images')
+          .from('found-images')
           .uploadBinary(
             filePath,
             bytes,
-            fileOptions: const FileOptions(contentType: 'image/jpeg'),
+            fileOptions: FileOptions(
+              contentType: 'image/$fileExt',
+              upsert: true,
+            ),
           );
       
       final imageUrl = Supabase.instance.client.storage
-          .from('images')
+          .from('found-images')
           .getPublicUrl(filePath);
       
       return imageUrl;
@@ -79,7 +83,6 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Upload Image logic
       String? uploadedImageUrl;
       if (_selectedImage != null) {
         uploadedImageUrl = await _uploadImage(widget.userId.toString());
