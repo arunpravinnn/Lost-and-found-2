@@ -7,7 +7,7 @@ import 'package:amrita_retriever/pages/add_found_item_page.dart';
 import 'package:amrita_retriever/pages/profile_page.dart';
 
 class HomePage extends StatefulWidget {
-  final int userId;
+  final String userId;
   const HomePage({super.key, required this.userId});
 
   @override

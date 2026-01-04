@@ -1,22 +1,31 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart'; 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Custom exception for User Database operations
+class UsersDbException implements Exception {
+  final String message;
+  final dynamic originalError;
+
+  UsersDbException({
+    required this.message, 
+    this.originalError,
+  });
+
+  @override
+  String toString() {
+    if (originalError != null) {
+      return 'UsersDbException: $message (Details: $originalError)';
+    }
+    return 'UsersDbException: $message';
+  }
+}
 class UsersDbClient {
   final SupabaseClient supabase;
 
   UsersDbClient({SupabaseClient? supabase})
       : supabase = supabase ?? Supabase.instance.client;
 
-  /// Hashes the password using SHA-256
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
-
-  /// Registers a new user directly into the `users` table.
-  Future<Map<String, dynamic>> getUser(int userId) async {
+  /// Updated: Fetches user by UUID
+  Future<Map<String, dynamic>> getUser(String userId) async {
     try {
       final response = await supabase
           .from('users')
@@ -29,6 +38,7 @@ class UsersDbClient {
     }
   }
 
+  /// Updated: Registers with Supabase Auth first, then creates profile
   Future<void> registerUser({
     required String name,
     required String email,
@@ -36,63 +46,52 @@ class UsersDbClient {
     required String password,
   }) async {
     try {
-      final hashedPassword = _hashPassword(password);
-      
+      // 1. Sign up the user in Supabase Auth
+      final AuthResponse authRes = await supabase.auth.signUp(
+        email: email,
+        password: password,
+      );
+
+      final String? uuid = authRes.user?.id;
+
+      if (uuid == null) {
+        throw UsersDbException(message: 'Auth signup failed: No UUID returned.');
+      }
+
+      // 2. Use the Auth UUID to create the profile in your public.users table
       await supabase.from('users').insert({
+        'user_id': uuid, // This matches the Auth UUID
         'name': name,
         'email': email,
         'phone': phone,
-        'password_hash': hashedPassword,
+        // No password_hash here! It's safely stored in Supabase Auth.
       });
       
     } catch (e) {
-      // Check for unique key violation (email)
-      if (e.toString().contains('users_email_key')) {
-         throw UsersDbException(message: 'Email already registered.');
-      }
       throw UsersDbException(message: 'Registration failed: $e');
     }
   }
 
-  /// Logs in a user by verifying credentials against `users` table.
-  /// Returns the user data (Map) if successful.
+  /// Updated: Uses Supabase Auth for login
   Future<Map<String, dynamic>> loginUser({
     required String email,
     required String password,
   }) async {
     try {
-      final response = await supabase
-          .from('users')
-          .select()
-          .eq('email', email)
-          .maybeSingle();
+      // 1. Log in via Supabase Auth
+      final AuthResponse authRes = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
 
-      if (response == null) {
-        throw UsersDbException(message: 'User not found.');
+      // 2. Fetch the extra profile data from your public table
+      if (authRes.user != null) {
+        return await getUser(authRes.user!.id);
       }
-
-      final storedHash = response['password_hash'] as String;
-      final inputHash = _hashPassword(password);
-
-      if (storedHash != inputHash) {
-        throw UsersDbException(message: 'Invalid password.');
-      }
-
-      return response; // Contains user_id, email, phone, etc.
+      
+      throw UsersDbException(message: 'Login failed.');
     } catch (e) {
-      if (e is UsersDbException) rethrow;
       throw UsersDbException(message: 'Login failed: $e');
     }
   }
-}
-
-
-
-class UsersDbException implements Exception {
-  final String message;
-
-  UsersDbException({required this.message});
-
-  @override
-  String toString() => message;
 }

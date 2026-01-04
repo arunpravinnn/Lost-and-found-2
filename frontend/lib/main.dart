@@ -11,7 +11,7 @@ Future<void> main() async {
 
   //  Initialize Supabase here using env vars
   await Supabase.initialize(
-    url: dotenv.env['NEXT_PUBLIC_SUPABASE_URL']!,
+    url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 

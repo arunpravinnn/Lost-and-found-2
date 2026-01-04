@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:amrita_retriever/services/postsdb.dart';
 
 class AddLostItemPage extends StatefulWidget {
-  final int userId;
+  final String userId;
   const AddLostItemPage({super.key, required this.userId});
 
   @override
@@ -48,27 +48,33 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
     if (_selectedImage == null) return null;
 
     final fileExt = _selectedImage!.name.split('.').last;
-    final fileName = '${DateTime.now().toIso8601String()}_$userIdStr.$fileExt';
-    final filePath = 'posts/$fileName'; // Changed folder to posts
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}_$userIdStr.$fileExt';
+    final filePath = 'images/$fileName'; 
 
     try {
       final bytes = await _selectedImage!.readAsBytes();
+      
       await Supabase.instance.client.storage
-          .from('images') // Ensure 'images' bucket exists
+          .from('lost-images') 
           .uploadBinary(
             filePath,
             bytes,
-            fileOptions: const FileOptions(contentType: 'image/jpeg'), 
+            fileOptions: FileOptions(
+              contentType: 'image/$fileExt', 
+              upsert: true, 
+            ), 
           );
       
+      // Get the URL to save in your database
       final imageUrl = Supabase.instance.client.storage
-          .from('images')
+          .from('lost-images')
           .getPublicUrl(filePath);
       
       return imageUrl;
     } catch (e) {
       debugPrint('Image upload error: $e');
-      throw Exception('Failed to upload image');
+      // It's helpful to throw the actual error message for debugging
+      throw Exception('Failed to upload image: $e');
     }
   }
 

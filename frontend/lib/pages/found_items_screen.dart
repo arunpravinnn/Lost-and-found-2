@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class FoundItemsTab extends StatefulWidget {
-  final int currentUserId;
+  final String currentUserId;
   const FoundItemsTab({super.key, required this.currentUserId});
 
   @override
