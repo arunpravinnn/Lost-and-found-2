@@ -337,7 +337,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                          Expanded(
                            child: ElevatedButton.icon(
                              onPressed: () => _launchWhatsApp(_revealedContact!['owner_phone']),
-                             icon: const Icon(Icons.chat),
                              label: const Text("WhatsApp"),
                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                            ),
@@ -346,7 +345,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                          Expanded(
                            child: ElevatedButton.icon(
                              onPressed: () => _launchEmail(_revealedContact!['owner_email']),
-                             icon: const Icon(Icons.email),
                              label: const Text("Email"),
                              style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                            ),
