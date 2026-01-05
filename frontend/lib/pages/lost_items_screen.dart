@@ -167,6 +167,29 @@ class _LostItemsTabState extends State<LostItemsTab> {
                         ? Image.network(item['image_url'], fit: BoxFit.cover)
                         : const Icon(Icons.image_outlined, size: 50, color: Colors.grey),
                   ),
+                  if (item['reward'] != null && item['reward'].toString().isNotEmpty)
+                    Positioned(
+                      top: 12, left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFC107),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.stars, color: Colors.white, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Reward: ${item['reward']}",
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   Positioned(
                     top: 12, right: 12,
                     child: Container(

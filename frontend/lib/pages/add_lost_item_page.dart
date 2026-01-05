@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:amrita_retriever/services/postsdb.dart';
+import 'package:amrita_retriever/services/location_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class AddLostItemPage extends StatefulWidget {
   final String userId;
@@ -15,10 +17,35 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _locationController = TextEditingController(); // We'll append this to description or separate if schema supported? Schema only has description. I'll append to description.
+  final _locationController = TextEditingController();
   final _dateController = TextEditingController();
+  final _rewardController = TextEditingController(); // Controller for reward
   
-  // Security Question is technically for FOUND items, but maybe lost items want it too? 
+  double? _latitude;
+  double? _longitude;
+  bool _gettingLocation = false;
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _gettingLocation = true);
+    try {
+      final position = await LocationService().getCurrentLocation();
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        // Optionally update the text field with coordinates or address if we had reverse geocoding
+        // _locationController.text = "${position.latitude}, ${position.longitude}"; 
+        ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text("Location captured!")),
+        );
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error getting location: $e")),
+      );
+    } finally {
+      if (mounted) setState(() => _gettingLocation = false);
+    }
+  } 
   // The prompt says: "if the user clicks on a 'found item' post, he should answer a security qn... to reveal... person who found it"
   // So Lost items don't necessarily need a security question to contact the owner? Usually contact info is public for lost items? 
   // But the schema has security_question locally in `posts` table.
@@ -101,6 +128,12 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
         'image_url': uploadedImageUrl,
         'security_question': null, // No security question for Lost items (or optional)
         'security_answer': null,
+        'image_url': uploadedImageUrl,
+        'security_question': null, // No security question for Lost items (or optional)
+        'security_answer': null,
+        'latitude': _latitude,
+        'longitude': _longitude,
+        'reward': _rewardController.text.isNotEmpty ? _rewardController.text : null, // Add reward to payload
       }, widget.userId);
 
       if (!mounted) return;
@@ -147,10 +180,25 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
                 validator: (v) => v!.isEmpty ? "Required" : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(labelText: "Location Lost"),
-                validator: (v) => v!.isEmpty ? "Required" : null,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _locationController,
+                      decoration: const InputDecoration(labelText: "Location Lost"),
+                      validator: (v) => v!.isEmpty ? "Required" : null,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _gettingLocation ? null : _getCurrentLocation,
+                    icon: _gettingLocation 
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Icon(Icons.my_location, color: _latitude != null ? Colors.green : Colors.grey),
+                    tooltip: "Get Current Location",
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -169,6 +217,15 @@ class _AddLostItemPageState extends State<AddLostItemPage> {
                     _dateController.text = date.toIso8601String().split('T')[0];
                   }
                 },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _rewardController,
+                decoration: const InputDecoration(
+                  labelText: "Reward (Optional)",
+                  hintText: "e.g. ₹500 or 'Chocolates'",
+                  prefixIcon: Icon(Icons.currency_rupee),
+                ),
               ),
               const SizedBox(height: 12),
               // Image Picker UI

@@ -289,6 +289,29 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Reward Banner
+                  if (widget.item['reward'] != null && widget.item['reward'].toString().isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFFFFA000), Color(0xFFFFC107)]),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(width: 8),
+                          Text(
+                            "REWARD: ${widget.item['reward']}",
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   Row(
                     children: [
                       Expanded(

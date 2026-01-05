@@ -41,6 +41,8 @@ dependencies:
   url_launcher: ^6.3.0
   image_picker: ^1.2.1
   crypto: ^3.0.7
+  geolocator: ^13.0.1
+  flutter_local_notifications: ^17.2.3
 
 dev_dependencies:
   flutter_test:

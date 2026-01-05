@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:amrita_retriever/services/postsdb.dart';
+import 'package:amrita_retriever/services/location_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class AddFoundItemPage extends StatefulWidget {
   final String userId;
@@ -18,6 +20,32 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
   final _locationController = TextEditingController();
   final _dateController = TextEditingController();
   final _contactController = TextEditingController();
+  
+  double? _latitude;
+  double? _longitude;
+  bool _gettingLocation = false;
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _gettingLocation = true);
+    try {
+      final position = await LocationService().getCurrentLocation();
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text("Location captured!")),
+        );
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error getting location: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _gettingLocation = false);
+    }
+  }
   
   // Security Question Fields
   final _securityQuestionController = TextEditingController();
@@ -97,6 +125,8 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
         'image_url': uploadedImageUrl,
         'security_question': _securityQuestionController.text,
         'security_answer': _securityAnswerController.text,
+        'latitude': _latitude,
+        'longitude': _longitude,
       }, widget.userId);
 
       if (!mounted) return;
@@ -143,10 +173,25 @@ class _AddFoundItemPageState extends State<AddFoundItemPage> {
                 validator: (v) => v!.isEmpty ? "Required" : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(labelText: "Location Found"),
-                validator: (v) => v!.isEmpty ? "Required" : null,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _locationController,
+                      decoration: const InputDecoration(labelText: "Location Found"),
+                      validator: (v) => v!.isEmpty ? "Required" : null,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _gettingLocation ? null : _getCurrentLocation,
+                    icon: _gettingLocation 
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Icon(Icons.my_location, color: _latitude != null ? Colors.green : Colors.grey),
+                    tooltip: "Get Current Location",
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               TextFormField(

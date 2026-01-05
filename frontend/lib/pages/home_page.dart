@@ -5,6 +5,8 @@ import 'package:amrita_retriever/pages/found_items_screen.dart';
 import 'package:amrita_retriever/pages/add_lost_item_page.dart';
 import 'package:amrita_retriever/pages/add_found_item_page.dart';
 import 'package:amrita_retriever/pages/profile_page.dart';
+import 'package:amrita_retriever/services/location_service.dart';
+import 'package:amrita_retriever/services/postsdb.dart';
 
 class HomePage extends StatefulWidget {
   final String userId;
@@ -30,7 +32,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       });
     });
     
+    
     _setupNotifications();
+    _checkProximity();
+  }
+
+  Future<void> _checkProximity() async {
+    await LocationService().init();
+    try {
+      final posts = await PostsDbClient().getPosts('LOST');
+      if (mounted) {
+         await LocationService().checkProximityAndNotify(posts);
+      }
+    } catch (e) {
+      debugPrint("Proximity check failed: $e");
+    }
   }
   
   void _setupNotifications() {
